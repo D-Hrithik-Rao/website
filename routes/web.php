@@ -18,6 +18,7 @@ use App\Http\Controllers\Quotation\QuotationController;
 use App\Http\Controllers\Dashboards\DashboardController;
 use App\Http\Controllers\Product\ProductExportController;
 use App\Http\Controllers\Product\ProductImportController;
+use App\Http\Controllers\InventoryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -35,7 +36,7 @@ Route::get('php/', function () {
 });
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect('/dashboard');
 });
 
 Route::middleware(['auth'])->group(function () {
@@ -88,9 +89,9 @@ Route::middleware(['auth'])->group(function () {
 
     // Route Purchases
     Route::get('/purchases/approved', [PurchaseController::class, 'approvedPurchases'])->name('purchases.approvedPurchases');
-    Route::get('/purchases/report', [PurchaseController::class, 'dailyPurchaseReport'])->name('purchases.dailyPurchaseReport');
-    Route::get('/purchases/report/export', [PurchaseController::class, 'getPurchaseReport'])->name('purchases.getPurchaseReport');
-    Route::post('/purchases/report/export', [PurchaseController::class, 'exportPurchaseReport'])->name('purchases.exportPurchaseReport');
+    Route::get('/purchases/daily-report', [PurchaseController::class, 'dailyPurchaseReport'])->name('purchases.dailyReport');
+    Route::get('/purchases/report', [PurchaseController::class, 'getPurchaseReport'])->name('purchases.getPurchaseReport');
+    Route::post('/purchases/report', [PurchaseController::class, 'exportPurchaseReport'])->name('purchases.exportPurchaseReport');
 
     Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
     Route::get('/purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
@@ -100,6 +101,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/purchases/{purchase}/edit', [PurchaseController::class, 'edit'])->name('purchases.edit');
     Route::put('/purchases/{purchase}/edit', [PurchaseController::class, 'update'])->name('purchases.update');
     Route::delete('/purchases/{purchase}', [PurchaseController::class, 'destroy'])->name('purchases.delete');
+
+    // Inventory Import/Export
+    Route::get('/inventory/export', [InventoryController::class, 'export'])->name('inventory.export');
+    Route::post('/inventory/import', [InventoryController::class, 'import'])->name('inventory.import');
 });
 
 require __DIR__.'/auth.php';

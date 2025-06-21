@@ -38,6 +38,8 @@ class Product extends Model
         'tax_type' => TaxType::class
     ];
 
+    // This Product model will be used for inventory import/export functionality.
+
     public function getRouteKeyName(): string
     {
         return 'slug';

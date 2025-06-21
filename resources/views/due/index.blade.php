@@ -7,8 +7,7 @@
         title="No orders found"
         message="Try adjusting your search or filter to find what you're looking for."
         button_label="{{ __('Add your first Order') }}"
-        button_route="{{ route('orders.create') }}"
-    />
+        button_route="{{ route('orders.create') }}" />
     @else
     <div class="container-xl">
         <div class="card">
@@ -56,20 +55,20 @@
                             </td>
                             <td class="text-center">
                                 <span class="badge bg-green text-white">
-                                    {{ Number::currency($order->pay, 'EUR') }}
+                                    {{ Number::currency($order->pay, 'INR') }}
                                 </span>
                             </td>
                             <td class="text-center">
                                 <span class="badge bg-yellow text-white">
-                                    {{ Number::currency($order->due, 'EUR') }}
+                                    {{ Number::currency($order->due, 'INR') }}
                                 </span>
                             </td>
                             <td class="text-center">
-                                <x-button.show class="btn-icon" route="{{ route('due.show', $order) }}"/>
-                                <x-button.edit class="btn-icon" route="{{ route('due.edit', $order) }}"/>
+                                <x-button.show class="btn-icon" route="{{ route('due.show', $order) }}" />
+                                <x-button.edit class="btn-icon" route="{{ route('due.edit', $order) }}" />
                             </td>
                         </tr>
-                      @endforeach
+                        @endforeach
                     </tbody>
                 </table>
             </div>

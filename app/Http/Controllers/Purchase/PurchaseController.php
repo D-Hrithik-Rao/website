@@ -21,15 +21,20 @@ class PurchaseController extends Controller
 {
     public function index()
     {
+        $purchases = Purchase::with(['supplier', 'createdBy', 'updatedBy', 'user'])
+            ->latest()
+            ->get();
+
         return view('purchases.index', [
-            'purchases' => Purchase::latest()->get(),
+            'purchases' => $purchases,
         ]);
     }
 
     public function approvedPurchases()
     {
-        $purchases = Purchase::with(['supplier'])
-            ->where('status', PurchaseStatus::APPROVED)->get(); // 1 = approved
+        $purchases = Purchase::with(['supplier', 'details.product', 'createdBy', 'updatedBy', 'user'])
+            ->where('status', PurchaseStatus::APPROVED)
+            ->get();
 
         return view('purchases.approved-purchases', [
             'purchases' => $purchases,
@@ -38,9 +43,14 @@ class PurchaseController extends Controller
 
     public function show(Purchase $purchase)
     {
-        $purchase->loadMissing(['supplier', 'details', 'createdBy', 'updatedBy'])->get();
+        $purchase->loadMissing([
+            'supplier', 
+            'details.product', 
+            'createdBy', 
+            'updatedBy'
+        ]);
 
-        $products = PurchaseDetails::where('purchase_id', $purchase->id)->get();
+        $products = $purchase->details()->with('product')->get();
 
         return view('purchases.details-purchase', [
             'purchase' => $purchase,
@@ -50,8 +60,7 @@ class PurchaseController extends Controller
 
     public function edit(Purchase $purchase)
     {
-        // N+1 Problem if load 'createdBy', 'updatedBy',
-        $purchase->with(['supplier', 'details'])->get();
+        $purchase->load(['supplier', 'details', 'createdBy', 'updatedBy']);
 
         return view('purchases.edit', [
             'purchase' => $purchase,
@@ -68,24 +77,35 @@ class PurchaseController extends Controller
 
     public function store(StorePurchaseRequest $request)
     {
-        $purchase = Purchase::create($request->all());
+        $purchase = Purchase::create([
+            'supplier_id' => $request->supplier_id,
+            'purchase_date' => $request->purchase_date ? Carbon::parse($request->purchase_date) : Carbon::now(),
+            'purchase_no' => $request->purchase_no,
+            'status' => $request->status ?? PurchaseStatus::PENDING,
+            'total_amount' => $request->total_amount,
+            'created_by' => auth()->id(),
+            'updated_by' => auth()->id()
+        ]);
+
+        // Ensure the date is properly set
+        if (!$purchase->purchase_date) {
+            $purchase->purchase_date = Carbon::now();
+            $purchase->save();
+        }
 
         /*
          * TODO: Must validate that
          */
-        if (! $request->invoiceProducts == null) {
-            $pDetails = [];
-
+        if (!empty($request->invoiceProducts)) {
             foreach ($request->invoiceProducts as $product) {
-                $pDetails['purchase_id'] = $purchase['id'];
-                $pDetails['product_id'] = $product['product_id'];
-                $pDetails['quantity'] = $product['quantity'];
-                $pDetails['unitcost'] = $product['unitcost'];
-                $pDetails['total'] = $product['total'];
-                $pDetails['created_at'] = Carbon::now();
-
-                //PurchaseDetails::insert($pDetails);
-                $purchase->details()->insert($pDetails);
+                $purchase->details()->create([
+                    'purchase_id' => $purchase->id,
+                    'product_id' => $product['product_id'],
+                    'quantity' => $product['quantity'],
+                    'unitcost' => (float) $product['unitcost'],
+                    'total' => (float) $product['total'],
+                    'created_at' => Carbon::now()
+                ]);
             }
         }
 
@@ -96,19 +116,43 @@ class PurchaseController extends Controller
 
     public function update(Purchase $purchase, Request $request)
     {
-        $products = PurchaseDetails::where('purchase_id', $purchase->id)->get();
+        // Load all necessary relationships before updating
+        $purchase->load(['supplier', 'details.product', 'createdBy', 'updatedBy']);
 
-        foreach ($products as $product) {
-            Product::where('id', $product->product_id)
-                ->update(['quantity' => DB::raw('quantity+'.$product->quantity)]);
+        // Get all product IDs and quantities in one query
+        $purchaseDetails = PurchaseDetails::with('product')
+            ->where('purchase_id', $purchase->id)
+            ->select('product_id', 'quantity')
+            ->get();
+
+        // Build an array of product updates
+        $productUpdates = $purchaseDetails->map(function ($detail) {
+            return [
+                'id' => $detail->product_id,
+                'quantity' => $detail->quantity
+            ];
+        })->toArray();
+
+        // Update all products in a single query using DB::transaction
+        DB::transaction(function () use ($productUpdates) {
+            foreach ($productUpdates as $update) {
+                Product::where('id', $update['id'])
+                    ->increment('quantity', $update['quantity']);
+            }
+        });
+
+        // Update the purchase status
+        $purchase->update([
+            'status' => PurchaseStatus::APPROVED,
+            'updated_by' => auth()->user()->id,
+            'purchase_date' => $purchase->purchase_date ?? Carbon::now()
+        ]);
+
+        // Ensure the date is properly set
+        if (!$purchase->purchase_date) {
+            $purchase->purchase_date = Carbon::now();
+            $purchase->save();
         }
-
-        Purchase::findOrFail($purchase->id)
-            ->update([
-                //'purchase_status' => 1, // 1 = approved, 0 = pending
-                'status' => PurchaseStatus::APPROVED,
-                'updated_by' => auth()->user()->id,
-            ]);
 
         return redirect()
             ->route('purchases.index')
@@ -126,9 +170,9 @@ class PurchaseController extends Controller
 
     public function dailyPurchaseReport()
     {
-        $purchases = Purchase::with(['supplier'])
-            //->where('purchase_status', 1)
-            ->where('date', today()->format('Y-m-d'))->get();
+        $purchases = Purchase::with(['supplier', 'createdBy', 'updatedBy', 'user'])
+            ->where('date', today()->format('Y-m-d'))
+            ->get();
 
         return view('purchases.daily-report', [
             'purchases' => $purchases,
@@ -143,8 +187,8 @@ class PurchaseController extends Controller
     public function exportPurchaseReport(Request $request)
     {
         $rules = [
-            'start_date' => 'required|string|date_format:Y-m-d',
-            'end_date' => 'required|string|date_format:Y-m-d',
+            'start_date' => 'required|date_format:Y-m-d',
+            'end_date' => 'required|date_format:Y-m-d',
         ];
 
         $validatedData = $request->validate($rules);
@@ -152,16 +196,26 @@ class PurchaseController extends Controller
         $sDate = $validatedData['start_date'];
         $eDate = $validatedData['end_date'];
 
+        // Add supplier name to the query
         $purchases = DB::table('purchase_details')
             ->join('products', 'purchase_details.product_id', '=', 'products.id')
             ->join('purchases', 'purchase_details.purchase_id', '=', 'purchases.id')
+            ->join('suppliers', 'purchases.supplier_id', '=', 'suppliers.id')
             ->join('users', 'users.id', '=', 'purchases.created_by')
             ->whereBetween('purchases.purchase_date', [$sDate, $eDate])
-            ->where('purchases.purchase_status', '1')
-            ->select('purchases.purchase_no', 'purchases.purchase_date', 'purchases.supplier_id', 'products.code', 'products.name', 'purchase_details.quantity', 'purchase_details.unitcost', 'purchase_details.total', 'users.name as created_by')
+            ->where('purchases.status', PurchaseStatus::APPROVED)
+            ->select(
+                'purchases.purchase_no',
+                'purchases.purchase_date as date',
+                'suppliers.name as supplier_name',
+                'products.code',
+                'products.name as product_name',
+                'purchase_details.quantity',
+                'purchase_details.unitcost',
+                'purchase_details.total',
+                'users.name as created_by'
+            )
             ->get();
-
-        dd($purchases);
 
         $purchase_array[] = [
             'Date',
@@ -177,18 +231,19 @@ class PurchaseController extends Controller
 
         foreach ($purchases as $purchase) {
             $purchase_array[] = [
-                'Date' => $purchase->purchase_date,
+                'Date' => $purchase->date,
                 'No Purchase' => $purchase->purchase_no,
-                'Supplier' => $purchase->supplier_id,
-                'Product Code' => $purchase->product_code,
+                'Supplier' => $purchase->supplier_name,
+                'Product Code' => $purchase->code,
                 'Product' => $purchase->product_name,
                 'Quantity' => $purchase->quantity,
                 'Unitcost' => $purchase->unitcost,
                 'Total' => $purchase->total,
+                'Created By' => $purchase->created_by
             ];
         }
 
-        $this->exportExcel($purchase_array);
+        return $this->exportExcel($purchase_array);
     }
 
     public function exportExcel($products)

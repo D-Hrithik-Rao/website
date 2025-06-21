@@ -115,7 +115,7 @@
                 </th>
                 <td class="text-center">
 {{--                    ${{ number_format($subtotal, 2) }}--}}
-                    {{ Number::currency($subtotal, 'EUR') }}
+                    {{ format_currency($subtotal) }}
                 </td>
             </tr>
             <tr>
@@ -138,7 +138,7 @@
                     Total
                 </th>
                 <td class="text-center">
-                    {{ Number::currency($total, 'EUR') }}
+                    {{ format_currency($total) }}
                     <input type="hidden" name="total_amount" value="{{ $total }}">
                 </td>
             </tr>

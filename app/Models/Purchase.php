@@ -12,13 +12,15 @@ class Purchase extends Model
 {
     use HasFactory;
 
+    protected $with = ['createdBy', 'updatedBy', 'user']; // Eager load these relationships by default
+
     protected $guarded = [
         'id',
     ];
 
     protected $fillable = [
         'supplier_id',
-        'date',
+        'purchase_date',
         'purchase_no',
         'status',
         'total_amount',
@@ -27,7 +29,7 @@ class Purchase extends Model
     ];
 
     protected $casts = [
-        'date'       => 'date',
+        'purchase_date' => 'date',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'status'     => PurchaseStatus::class
@@ -46,6 +48,11 @@ class Purchase extends Model
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by', 'id');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by', 'id');
     }
 
     public function details(): HasMany

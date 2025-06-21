@@ -45,11 +45,11 @@
                                             {{ __('Purchase Date') }}
                                         </label>
 
-                                        <input name="date" id="date" type="date"
+                                        <input name="purchase_date" id="purchase_date" type="date"
                                                class="form-control example-date-input
 
-                                               @error('date') is-invalid @enderror"
-                                               value="{{ old('date') ?? now()->format('Y-m-d') }}"
+                                               @error('purchase_date') is-invalid @enderror"
+                                               value="{{ old('purchase_date') ?? now()->format('Y-m-d') }}"
                                                required
                                         >
 

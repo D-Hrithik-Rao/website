@@ -34,7 +34,7 @@ class PurchaseTable extends Component
     {
         return view('livewire.tables.purchase-table', [
             'purchases' => Purchase::query()
-                ->with('supplier')
+                ->with(['supplier', 'createdBy', 'updatedBy', 'user'])
                 ->search($this->search)
                 ->orderBy($this->sortField, $this->sortAsc ? 'asc' : 'desc')
                 ->paginate($this->perPage),

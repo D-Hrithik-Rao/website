@@ -56,9 +56,9 @@
                         </a>
                     </th>
                     <th scope="col" class="align-middle text-center">
-                        <a wire:click.prevent="sortBy('date')" href="#" role="button">
+                        <a wire:click.prevent="sortBy('purchase_date')" href="#" role="button">
                             {{ __('Date') }}
-                            @include('inclues._sort-icon', ['field' => 'date'])
+                            @include('inclues._sort-icon', ['field' => 'purchase_date'])
                         </a>
                     </th>
                     <th scope="col" class="align-middle text-center">
@@ -91,10 +91,10 @@
                         {{ $purchase->supplier->name }}
                     </td>
                     <td class="align-middle text-center">
-                        {{ $purchase->date->format('d-m-Y') }}
+                        {{ $purchase->purchase_date ? $purchase->purchase_date->format('d-m-Y') : 'N/A' }}
                     </td>
                     <td class="align-middle text-center">
-                        {{ Number::currency($purchase->total_amount, 'EUR') }}
+                        {{ format_currency($purchase->total_amount) }}
                     </td>
 
                     @if ($purchase->status === \App\Enums\PurchaseStatus::APPROVED)

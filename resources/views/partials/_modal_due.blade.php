@@ -19,8 +19,7 @@
                                 </label>
 
                                 <input type="text" id="payed" class="form-control"
-                                       value="{{ Number::currency($order->pay, 'EUR') }}" disabled
-                                >
+                                    value="{{ Number::currency($order->pay, 'INR') }}" disabled>
                             </div>
                         </div>
 
@@ -31,7 +30,7 @@
                                 </label>
 
                                 <input type="text" id="due" class="form-control"
-                                       value="{{ Number::currency($order->due, 'EUR') }}" disabled>
+                                    value="{{ Number::currency($order->due, 'INR') }}" disabled>
                             </div>
                         </div>
 
@@ -41,12 +40,11 @@
                             </label>
 
                             <input type="text"
-                                   id="pay_now"
-                                   name="pay"
-                                   class="form-control @error('pay') is-invalid @enderror"
-                                   value="{{ old('pay') }}"
-                                   required
-                            />
+                                id="pay_now"
+                                name="pay"
+                                class="form-control @error('pay') is-invalid @enderror"
+                                value="{{ old('pay') }}"
+                                required />
 
                             @error('pay')
                             <div class="invalid-feedback">
@@ -61,7 +59,7 @@
                         {{ __('Cancel') }}
                     </button>
 
-{{--                    <button type="submit" class="btn btn-primary" data-bs-dismiss="modal">--}}
+                    {{-- <button type="submit" class="btn btn-primary" data-bs-dismiss="modal">--}}
                     <button type="submit" class="btn btn-primary">
                         {{ __('Pay') }}
                     </button>

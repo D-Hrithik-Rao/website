@@ -13,6 +13,15 @@
         <div class="container container-xl">
             <x-alert/>
 
+            <div class="mb-3 d-flex justify-content-end">
+                <form action="{{ route('inventory.import') }}" method="POST" enctype="multipart/form-data" class="d-inline-block me-2">
+                    @csrf
+                    <input type="file" name="file" required class="form-control d-inline-block w-auto" style="display:inline-block; width:auto;">
+                    <button type="submit" class="btn btn-primary">Import Inventory</button>
+                </form>
+                <a href="{{ route('inventory.export') }}" class="btn btn-success">Export Inventory</a>
+            </div>
+
             @livewire('tables.product-table')
         </div>
     @endif
